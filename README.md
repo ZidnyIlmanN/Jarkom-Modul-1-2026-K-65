@@ -647,6 +647,181 @@ Semua ping berhasil (0% packet loss). Hal ini membuktikan bahwa konfigurasi berh
 > **[SCREENSHOT 12: Pengujian Pasca-Reboot: Output /root/cek_status.sh & Ping google.com di Client Alice]**
 
 ---
+## 6. Analisis Trafik ICMP dan DNS menggunakan Wireshark
+
+### Hasil Capture
+
+Berdasarkan hasil capture menggunakan Wireshark, node dengan alamat IP `10.96.1.3` melakukan komunikasi ICMP dan DNS dengan beberapa server eksternal.
+
+#### a. ICMP
+
+Terlihat node `10.96.1.3` melakukan ICMP Echo Request kepada:
+
+* `8.8.8.8` (Google Public DNS)
+* `1.1.1.1` (Cloudflare DNS)
+
+Contoh paket:
+
+```text
+10.96.1.3 → 8.8.8.8    ICMP Echo (ping) request
+8.8.8.8 → 10.96.1.3    ICMP Echo (ping) reply
+
+10.96.1.3 → 1.1.1.1    ICMP Echo (ping) request
+1.1.1.1 → 10.96.1.3    ICMP Echo (ping) reply
+```
+
+Dari capture terlihat setiap Echo Request mendapatkan Echo Reply. Contohnya pada paket 3 dan 10, serta paket 4 dan 11. Hal tersebut menunjukkan bahwa komunikasi ICMP dari `10.96.1.3` menuju kedua alamat tujuan berhasil.
+
+Nilai TTL pada paket yang dikirim dari `10.96.1.3` adalah `64`, sedangkan TTL pada reply dari `8.8.8.8` adalah `110` dan dari `1.1.1.1` adalah `50`.
+
+#### b. DNS
+
+Selain ICMP, node `10.96.1.3` juga melakukan DNS query ke `8.8.8.8` dan `1.1.1.1`.
+
+Beberapa domain yang diminta antara lain:
+
+* `example.com`
+* `github.com`
+* `its.ac.id`
+* `google.com`
+* `cloudflare.com`
+
+Contoh komunikasi DNS:
+
+```text
+10.96.1.3 → 8.8.8.8    DNS query A example.com
+8.8.8.8 → 10.96.1.3    DNS response A example.com
+
+10.96.1.3 → 1.1.1.1    DNS query A github.com
+1.1.1.1 → 10.96.1.3    DNS response A github.com
+```
+
+DNS response menunjukkan bahwa query berhasil mendapatkan jawaban. Sebagai contoh, `github.com` mendapatkan alamat IPv4 `20.205.243.166`, sedangkan `its.ac.id` mendapatkan alamat IPv4 `103.94.189.5`.
+
+### Kesimpulan
+
+Berdasarkan hasil capture Wireshark, node `10.96.1.3` berhasil melakukan komunikasi jaringan menggunakan protokol ICMP dan DNS. Paket ICMP Echo Request mendapatkan Echo Reply dari `8.8.8.8` dan `1.1.1.1`, sedangkan DNS query terhadap beberapa domain juga mendapatkan response dari server DNS tujuan.
+
+---
+
+## 7. FTP Server dan Access Policy
+
+### Konfigurasi FTP Server
+
+FTP Server dibuat pada node **Chisa** menggunakan `vsftpd`.
+
+Alamat IP FTP Server:
+
+```text
+10.96.2.2/24
+```
+
+Shared folder yang digunakan:
+
+```text
+/var/wired/data
+```
+
+Konfigurasi utama `vsftpd`:
+
+```text
+listen=YES
+anonymous_enable=NO
+local_enable=YES
+write_enable=YES
+local_umask=022
+
+local_root=/var/wired/data
+
+chroot_local_user=YES
+allow_writeable_chroot=YES
+
+userlist_enable=YES
+userlist_deny=YES
+userlist_file=/etc/vsftpd.userlist
+
+pasv_enable=YES
+pasv_min_port=30000
+pasv_max_port=30009
+pasv_address=10.96.2.2
+
+user_config_dir=/etc/vsftpd/user_conf
+
+seccomp_sandbox=NO
+```
+
+File blacklist:
+
+```text
+/etc/vsftpd.userlist
+```
+
+berisi:
+
+```text
+eiri
+```
+
+### Access Policy
+
+| User    | Hak Akses                             |
+| ------- | ------------------------------------- |
+| `alice` | Read & Write                          |
+| `mika`  | Read Only                             |
+| `eiri`  | Tidak dapat mengakses FTP / Blacklist |
+
+Konfigurasi per-user:
+
+```text
+/etc/vsftpd/user_conf/alice
+```
+
+```text
+write_enable=YES
+```
+
+Sedangkan:
+
+```text
+/etc/vsftpd/user_conf/mika
+```
+
+```text
+write_enable=NO
+```
+
+### Pengujian Alice
+
+User `alice` digunakan untuk menguji hak read & write pada shared folder.
+
+File berikut berhasil dibuat:
+
+```text
+/var/wired/data/signal_alice.txt
+```
+
+Hal tersebut membuktikan bahwa user `alice` memiliki hak untuk melakukan operasi write pada shared folder FTP.
+
+### Pengujian Eiri
+
+Pengujian dilakukan dari node Alice menggunakan `lftp`:
+
+```text
+lftp -d -u eiri 10.96.2.2
+```
+
+Saat perintah `ls` dijalankan, proses autentikasi menghasilkan:
+
+```text
+---> USER eiri
+<--- 530 Permission denied.
+```
+
+Respons `530 Permission denied` menunjukkan bahwa user `eiri` ditolak oleh FTP Server.
+
+### Kesimpulan
+
+FTP Server pada node Chisa berhasil dikonfigurasi menggunakan `vsftpd` dengan shared folder `/var/wired/data`. User `alice` diberikan hak read & write, user `mika` dikonfigurasi sebagai read-only, sedangkan user `eiri` dimasukkan ke dalam blacklist sehingga proses autentikasinya ditolak oleh FTP Server dengan respons `530 Permission denied`.
 
 ## 6. ANALISIS DAN PEMBAHASAN
 
