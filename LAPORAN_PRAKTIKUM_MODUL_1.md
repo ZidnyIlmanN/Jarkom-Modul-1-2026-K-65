@@ -27,10 +27,12 @@
    - 4.7. Verifikasi dan Pengujian Konektivitas End-to-End
 5. [Langkah Pengerjaan Soal 5 (Persistensi Konfigurasi Pasca-Reboot)](#5-langkah-pengerjaan-soal-5-persistensi-konfigurasi-pasca-reboot)
    - 5.1. Analisis Kebutuhan Persistensi pada Docker GNS3
-   - 5.2. Pembuatan Script Router `Lain` (`konfigurasi_lain.sh` & `cek_status.sh`)
-   - 5.3. Pembuatan Script Client (`konfigurasi_client.sh` & `cek_status.sh`)
-   - 5.4. Integrasi Otomatisasi Startup Command pada GNS3
-   - 5.5. Pengujian Reboot Node dan Validasi Hasil
+   - 5.2. Organisasi dan Struktur Penyimpanan Skrip (`perquest-scripts/` & `scripts/`)
+   - 5.3. Pembuatan Script Lengkap Router `Lain` (`konfigurasi_lain.sh` & `cek_status.sh`)
+   - 5.4. Pembuatan Script Lengkap Client (`konfigurasi_<node>.sh` & `cek_status.sh`)
+   - 5.5. Implementasi Skrip Modular Per-Soal (`perquest-scripts/soal_1.sh` s.d. `soal_10.sh`)
+   - 5.6. Integrasi Otomatisasi Startup Command pada GNS3
+   - 5.7. Pengujian Reboot Node dan Validasi Hasil
 6. [Langkah Pengerjaan Soal 6 (Analisis Trafik ICMP dan DNS Menggunakan Wireshark)](#6-langkah-pengerjaan-soal-6-analisis-trafik-icmp-dan-dns-menggunakan-wireshark)
    - 6.1. Metodologi Packet Capture di GNS3
    - 6.2. Analisis Komunikasi Protokol ICMP
@@ -420,7 +422,59 @@ Untuk memenuhi kriteria Soal 5:
 
 ---
 
-### 5.2. Pembuatan Script Router `Lain`
+### 5.2. Organisasi dan Struktur Penyimpanan Skrip
+
+Berdasarkan kebutuhan pengujian dan dokumentasi praktikum, seluruh skrip otomasi dikelompokkan ke dalam dua model struktur penyimpanan:
+
+1. **Skrip Modular Per-Soal (`perquest-scripts/`)**:  
+   Skrip yang disimpan per nomor soal (`soal_1.sh` sampai dengan `soal_10.sh`) dengan blok node terpisah (`# ---- NODE <NAMA> ----`), memudahkan pengujian modular dan pemeriksaan independen untuk masing-masing soal praktikum.
+2. **Skrip Lengkap Per-Node (`scripts/`)**:  
+   Skrip konfigurasi utuh untuk masing-masing node (`router/` dan `client/`) yang dirancang untuk dieksekusi saat container pertama kali menyala (startup persistensi).
+
+```text
+├── perquest-scripts/               # Skrip Modular per Nomor Soal
+│   ├── soal_1.sh                  # Setup Topologi Jaringan GNS3
+│   ├── soal_2.sh                  # Konfigurasi Interface Router Lain
+│   ├── soal_3.sh                  # Konfigurasi Interface Seluruh Node Client
+│   ├── soal_4.sh                  # IP Forwarding, NAT Masquerade, dan DNS Resolver
+│   ├── soal_5.sh                  # Skrip Otomasi Persistensi Startup Pasca-Reboot
+│   ├── soal_6.sh                  # Pemicu Trafik ICMP dan DNS (Analisis Wireshark)
+│   ├── soal_7.sh                  # Konfigurasi FTP Server vsftpd & Access Policy Chisa
+│   ├── soal_8.sh                  # Upload Intelligence Report Knights ke Chisa (1111B)
+│   ├── soal_9.sh                  # Download Manifesto (3476B) & Uji Tolak Upload Mika
+│   └── soal_10.sh                 # Eksekusi Ping 77 Paket Knights ke Chisa
+│
+└── scripts/                        # Skrip Otomasi Lengkap per Node
+    ├── router/
+    │   ├── konfigurasi_lain.sh     # Konfigurasi lengkap startup Router Lain
+    │   └── cek_status.sh           # Pemeriksaan status interface, IP & NAT Router
+    └── client/
+        ├── konfigurasi_alice.sh    # Konfigurasi startup node Alice
+        ├── konfigurasi_mika.sh     # Konfigurasi startup node Mika
+        ├── konfigurasi_chisa.sh    # Konfigurasi startup node Chisa
+        ├── konfigurasi_knights.sh  # Konfigurasi startup node Knights
+        ├── konfigurasi_eiri.sh     # Konfigurasi startup node Eiri
+        └── cek_status.sh           # Pemeriksaan status interface, IP, route & DNS Client
+```
+
+#### Tabel Pemetaan Skrip Per-Soal (`perquest-scripts/`)
+
+| File Skrip | Nomor Soal | Target Node | Deskripsi & Fungsi Utama |
+|---|---|---|---|
+| [`soal_1.sh`](perquest-scripts/soal_1.sh) | Soal 1 | GNS3 Topology | Metadata dan verifikasi topologi 1 router, 3 switch, dan 5 client. |
+| [`soal_2.sh`](perquest-scripts/soal_2.sh) | Soal 2 | Lain | Konfigurasi `/etc/network/interfaces` Router Lain (DHCP, NAT, IP statis LAN). |
+| [`soal_3.sh`](perquest-scripts/soal_3.sh) | Soal 3 | Alice, Mika, Chisa, Knights, Eiri | Konfigurasi antarmuka `/etc/network/interfaces` setiap node client. |
+| [`soal_4.sh`](perquest-scripts/soal_4.sh) | Soal 4 | Lain & Clients | Aktivasi `ip_forward=1`, iptables MASQUERADE, dan DNS resolver `/etc/resolv.conf`. |
+| [`soal_5.sh`](perquest-scripts/soal_5.sh) | Soal 5 | Seluruh Node | Pembuatan script persistensi startup `/root/konfigurasi_*.sh` pada semua node. |
+| [`soal_6.sh`](perquest-scripts/soal_6.sh) | Soal 6 | Mika | Pemicu pengiriman paket ICMP ping (8.8.8.8, 1.1.1.1) dan query DNS domain. |
+| [`soal_7.sh`](perquest-scripts/soal_7.sh) | Soal 7 | Chisa | Setup FTP vsftpd (user Alice R/W, Mika Read-Only, Eiri Blacklist, port pasif). |
+| [`soal_8.sh`](perquest-scripts/soal_8.sh) | Soal 8 | Knights & Chisa | Pembuatan berkas 1111 bytes dan upload via akun Alice mode pasif port 30009. |
+| [`soal_9.sh`](perquest-scripts/soal_9.sh) | Soal 9 | Chisa & Mika | Unduh manifesto 3476 bytes dan validasi penolakan upload akun Mika (550). |
+| [`soal_10.sh`](perquest-scripts/soal_10.sh) | Soal 10 | Knights | Eksekusi ping 77 paket dengan payload 128 bytes dan interval 0.3s ke Chisa. |
+
+---
+
+### 5.3. Pembuatan Script Lengkap Router `Lain`
 
 Pada node **Lain**, dibuat dua buah script di direktori `/root/`:
 1. `/root/konfigurasi_lain.sh` (Untuk inisialisasi jaringan)
@@ -511,7 +565,7 @@ Eksekusi script untuk memastikan tidak ada sintaks error:
 
 ---
 
-### 5.3. Pembuatan Script Client
+### 5.4. Pembuatan Script Lengkap Client
 
 Pada setiap node client, dibuat script `/root/konfigurasi_client.sh` dan `/root/cek_status.sh`.
 
@@ -647,7 +701,40 @@ chmod +x /root/cek_status.sh
 
 ---
 
-### 5.4. Integrasi Otomatisasi Startup Command pada GNS3
+### 5.5. Implementasi Skrip Modular Per-Soal (`perquest-scripts/`)
+
+Sebagai pelengkap dari skrip startup per-node, setiap instruksi konfigurasi dan pengujian soal juga dienkapsulasi dalam berkas skrip terpisah pada direktori `perquest-scripts/`:
+
+#### 1. Skrip Soal 2 (`perquest-scripts/soal_2.sh`)
+Mengonfigurasi `/etc/network/interfaces` pada Router Lain dengan penanganan DHCP dan IP statis ketiga interface LAN.
+
+#### 2. Skrip Soal 3 (`perquest-scripts/soal_3.sh`)
+Mengonfigurasi `/etc/network/interfaces` untuk seluruh client (Alice, Mika, Chisa, Knights, Eiri) dengan alokasi IP statis dan gateway yang presisi per subnet.
+
+#### 3. Skrip Soal 4 (`perquest-scripts/soal_4.sh`)
+Mengaktifkan kernel parameter `net.ipv4.ip_forward=1`, aturan `iptables NAT MASQUERADE` pada Router Lain, serta DNS nameserver pada setiap client.
+
+#### 4. Skrip Soal 5 (`perquest-scripts/soal_5.sh`)
+Menyusun template script persistensi startup otomatis pada router dan seluruh client.
+
+#### 5. Skrip Soal 6 (`perquest-scripts/soal_6.sh`)
+Mengeksekusi perintah pemicu lalu lintas data ICMP echo request dan resolusi nama DNS untuk keperluan inspeksi paket Wireshark.
+
+#### 6. Skrip Soal 7 (`perquest-scripts/soal_7.sh`)
+Menginstalasi, mengonfigurasi daemon `vsftpd`, mengatur shared storage, serta menetapkan kebijakan akses (Alice R/W, Mika R-O, Eiri blacklist).
+
+#### 7. Skrip Soal 8 (`perquest-scripts/soal_8.sh`)
+Menghasilkan payload berkas tepat 1111 bytes dan melakukan transfer upload FTP pasif port 30009 dari Knights ke Chisa.
+
+#### 8. Skrip Soal 9 (`perquest-scripts/soal_9.sh`)
+Mengunduh berkas manifesto 3476 bytes dan memvalidasi penolakan izin unggah (550 Permission Denied) untuk user Mika.
+
+#### 9. Skrip Soal 10 (`perquest-scripts/soal_10.sh`)
+Mengeksekusi perintah diagnostik ICMP 77 paket data dengan interval 0.3s dan payload 128 bytes dari Knights ke Chisa.
+
+---
+
+### 5.6. Integrasi Otomatisasi Startup Command pada GNS3
 
 Agar script dieksekusi secara otomatis setiap kali node di-boot ulang oleh GNS3:
 
@@ -679,7 +766,7 @@ echo "/root/konfigurasi_lain.sh" >> /root/.bashrc
 
 ---
 
-### 5.5. Pengujian Reboot Node dan Validasi Hasil
+### 5.7. Pengujian Reboot Node dan Validasi Hasil
 
 Untuk membuktikan bahwa sistem telah memenuhi syarat Soal 5:
 
