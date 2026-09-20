@@ -14,7 +14,6 @@
 ---
 
 ## DAFTAR ISI
-1. [Tujuan Praktikum](#1-tujuan-praktikum)
 2. [Dasar Teori Singkat](#2-dasar-teori-singkat)
 3. [Topologi Jaringan dan Tabel Pengalamatan](#3-topologi-jaringan-dan-tabel-pengalamatan)
 4. [Langkah Pengerjaan Soal 1 - 4](#4-langkah-pengerjaan-soal-1---4)
@@ -66,21 +65,6 @@
     - 10.5. Ringkasan dan Kesimpulan Soal 10
 11. [Analisis dan Pembahasan](#11-analisis-dan-pembahasan)
 12. [Kesimpulan](#12-kesimpulan)
-
----
-
-## 1. TUJUAN PRAKTIKUM
-1. Mampu merancang dan mengimplementasikan topologi jaringan komputer menggunakan simulator GNS3.
-2. Mampu melakukan konfigurasi pengalamatan IP statis dan dinamis (DHCP) dengan prefix kelompok `10.96.x.x`.
-3. Memahami dan mengimplementasikan mekanisme *routing* dan aktivasi *Kernel IP Forwarding* pada sistem operasi Linux.
-4. Mengimplementasikan Network Address Translation (NAT) dengan metode *MASQUERADE* melalui `iptables` agar subnet lokal dapat terhubung ke Internet.
-5. Mampu mengonfigurasi Domain Name System (DNS) resolver pada node client.
-6. Mampu membuat script automasi berbasis shell script yang *idempotent* dan persisten terhadap proses *reboot/restart* container pada lingkungan GNS3.
-7. Mampu melakukan analisis paket trafik jaringan (ICMP dan DNS) menggunakan packet analyzer Wireshark pada node client.
-8. Mampu mengimplementasikan File Transfer Protocol (FTP) Server menggunakan `vsftpd` pada node Chisa serta menerapkan *access control policy* (read & write, read-only, dan blacklist) berbasis user.
-9. Mampu melakukan dan menganalisis mekanisme transfer data file (upload) antar-subnet melalui protokol FTP mode pasif (*Passive FTP*), serta membedah alur paket kontrol TCP port 21, negosiasi port pasif `227 Entering Passive Mode`, perintah `STOR`, dan kode respon `226 Transfer complete` menggunakan packet capture Wireshark.
-10. Mampu melakukan dan menganalisis mekanisme pengunduhan file (download) via perintah `RETR` serta membuktikan penegakan kebijakan hak akses *read-only* (penolakan perintah upload dengan error `550 Permission denied`) pada akun pengguna FTP tertentu melalui inspeksi paket Wireshark.
-11. Mampu menganalisis karakteristik transmisi paket ICMP antar-subnet (Knights ke Chisa) dengan parameter kustom (jumlah paket, ukuran payload, interval) serta mengevaluasi performa statistik Round-Trip Time (RTT min/avg/max/mdev), packet loss, dan inspeksi Type 8/Type 0 menggunakan Wireshark.
 
 ---
 
