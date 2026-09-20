@@ -1582,6 +1582,87 @@ Hasil tangkapan paket Wireshark memvalidasi pertukaran pesan menggunakan protoko
 
 ---
 
+### 14. Analisis Serangan BruteForce
+
+## Tujuan
+## Tujuan Analisis
+
+Menganalisis file `soal14_wired_bruteforce.pcapng` untuk mengidentifikasi sumber serangan brute-force, target layanan web, kredensial yang berhasil digunakan, dan software web server.
+Pada soal ini saya menganalisis file `soal14_wired_bruteforce.pcapng`. Tujuannya adalah mencari IP penyerang, target serangan, kredensial yang berhasil dipakai untuk login, serta informasi web server target.
+
+## Alur Analisis di Wireshark
+## Langkah Analisis
+
+1. Buka file capture `soal14_wired_bruteforce.pcapng` di Wireshark.
+2. Pada kolom **Display Filter**, masukkan filter berikut lalu tekan **Enter**:
+Pertama, saya membuka file capture menggunakan Wireshark. Karena serangannya mengarah ke form login web, saya memfilter request HTTP dengan metode POST menggunakan filter berikut:
+
+   ```wireshark
+   http.request.method == "POST"
+   ```
+```wireshark
+http.request.method == "POST"
+```
+
+   Filter ini menampilkan request login yang dikirim ke endpoint `/login.php`.
+Setelah filter diterapkan, terlihat banyak request `POST /login.php`. Request tersebut secara berulang dikirim dari IP `172.26.7.50` ke IP `172.26.7.100`. Dari pola request login yang berulang dengan koneksi berbeda, saya menyimpulkan bahwa IP `172.26.7.50` sedang melakukan brute-force terhadap form login pada target.
+
+3. Amati paket-paket hasil filter. Terlihat banyak request `POST /login.php` dari IP `172.26.7.50` ke `172.26.7.100`. Pola percobaan berulang ini menunjukkan serangan brute-force.
+4. Pilih paket POST terakhir, yaitu **frame 350**. Pada detail paket, buka:
+Port tujuan dapat dilihat pada detail TCP salah satu request POST, yaitu `Dst Port: 8080`. Jadi layanan web target berjalan pada IP `172.26.7.100` port `8080`.
+
+   ```text
+   Hypertext Transfer Protocol
+   └── HTML Form URL Encoded
+   ```
+Selanjutnya, saya berpindah ke request POST terakhir, yaitu **frame 350**. Pada bagian detail paket, saya membuka:
+
+   Field form memperlihatkan username `lain_admin` dan password `wired_protocol_7`.
+```text
+Hypertext Transfer Protocol
+└── HTML Form URL Encoded
+```
+
+5. Buka respons untuk request tersebut melalui tautan **Response in frame: 351**, atau gunakan filter:
+Bagian tersebut menampilkan data yang dikirim oleh form login. Dari sana saya menemukan:
+
+   ```wireshark
+   frame.number == 351
+   ```
+```text
+username: lain_admin
+password: wired_protocol_7
+```
+
+6. Pada frame 351, buka **Hypertext Transfer Protocol**. Respons `HTTP/1.1 200 OK` membuktikan login berhasil. Header `Server` menunjukkan software dan versi web server.
+Untuk memastikan bahwa kredensial tersebut benar, saya melihat respons dari request ini melalui tautan **Response in frame: 351**. Respons yang diterima adalah `HTTP/1.1 200 OK`. Berbeda dengan percobaan sebelumnya yang menghasilkan `401 Unauthorized`, kode `200 OK` menunjukkan login pada frame 350 berhasil.
+
+Pada detail HTTP di frame 351, saya juga menemukan response header berikut:
+
+```text
+Server: Apache/2.4.62
+```
+
+## Ringkasan Temuan
+## Hasil Temuan
+
+| Artefak | Hasil |
+| Informasi yang dicari | Hasil analisis |
+| --- | --- |
+| Endpoint yang diserang | `/login.php` |
+| Username berhasil | `lain_admin` |
+| Password berhasil | `wired_protocol_7` |
+| Bukti login berhasil | `HTTP/1.1 200 OK` pada frame 351 |
+| Web server | `Apache/2.4.62` |
+| Username yang berhasil digunakan | `lain_admin` |
+| Password yang berhasil digunakan | `wired_protocol_7` |
+| Bukti keberhasilan login | Respons `HTTP/1.1 200 OK` pada frame 351 |
+| Software web server | `Apache/2.4.62` |
+
+
+Host `172.26.7.50` melakukan percobaan login berulang terhadap layanan web `172.26.7.100` pada port `8080`. Percobaan terakhir menggunakan akun `lain_admin` dengan password `wired_protocol_7` dan memperoleh respons `200 OK`, sehingga kredensial tersebut valid. Server target melaporkan dirinya sebagai `Apache/2.4.62` melalui response header HTTP.
+Berdasarkan hasil analisis capture, saya menyimpulkan bahwa host `172.26.7.50` melakukan serangan brute-force ke halaman login `/login.php` pada server `172.26.7.100:8080`. Percobaan yang berhasil menggunakan username `lain_admin` dengan password `wired_protocol_7`. Keberhasilan login dibuktikan oleh respons `HTTP 200 OK`, sedangkan server target menggunakan `Apache/2.4.62`.
+
 ## 11. ANALISIS DAN PEMBAHASAN
 
 1. **Peran Idempotensi pada Script Jaringan:**  
