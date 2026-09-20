@@ -1583,19 +1583,16 @@ Hasil tangkapan paket Wireshark memvalidasi pertukaran pesan menggunakan protoko
 ---
 
 ### 14. Analisis Serangan BruteForce
-
-## Tujuan
 ## Tujuan Analisis
 
 Menganalisis file `soal14_wired_bruteforce.pcapng` untuk mengidentifikasi sumber serangan brute-force, target layanan web, kredensial yang berhasil digunakan, dan software web server.
 Pada soal ini saya menganalisis file `soal14_wired_bruteforce.pcapng`. Tujuannya adalah mencari IP penyerang, target serangan, kredensial yang berhasil dipakai untuk login, serta informasi web server target.
 
-## Alur Analisis di Wireshark
-## Langkah Analisis
+## Alur Analisis di Wiresharks
 
-1. Buka file capture `soal14_wired_bruteforce.pcapng` di Wireshark.
+1. Kami membuka file capture `soal14_wired_bruteforce.pcapng` di Wireshark.
 2. Pada kolom **Display Filter**, masukkan filter berikut lalu tekan **Enter**:
-Pertama, saya membuka file capture menggunakan Wireshark. Karena serangannya mengarah ke form login web, saya memfilter request HTTP dengan metode POST menggunakan filter berikut:
+Pertama, saya membuka file capture menggunakan Wireshark. Karena serangannya mengarah ke form login web, kami memfilter request HTTP dengan metode POST menggunakan filter berikut:
 
    ```wireshark
    http.request.method == "POST"
@@ -1605,7 +1602,7 @@ http.request.method == "POST"
 ```
 
    Filter ini menampilkan request login yang dikirim ke endpoint `/login.php`.
-Setelah filter diterapkan, terlihat banyak request `POST /login.php`. Request tersebut secara berulang dikirim dari IP `172.26.7.50` ke IP `172.26.7.100`. Dari pola request login yang berulang dengan koneksi berbeda, saya menyimpulkan bahwa IP `172.26.7.50` sedang melakukan brute-force terhadap form login pada target.
+Setelah filter diterapkan, terlihat banyak request `POST /login.php`. Request tersebut secara berulang dikirim dari IP `172.26.7.50` ke IP `172.26.7.100`. Dari pola request login yang berulang dengan koneksi berbeda, kami menyimpulkan bahwa IP `172.26.7.50` sedang melakukan brute-force terhadap form login pada target.
 
 3. Amati paket-paket hasil filter. Terlihat banyak request `POST /login.php` dari IP `172.26.7.50` ke `172.26.7.100`. Pola percobaan berulang ini menunjukkan serangan brute-force.
 4. Pilih paket POST terakhir, yaitu **frame 350**. Pada detail paket, buka:
@@ -1615,7 +1612,7 @@ Port tujuan dapat dilihat pada detail TCP salah satu request POST, yaitu `Dst Po
    Hypertext Transfer Protocol
    └── HTML Form URL Encoded
    ```
-Selanjutnya, saya berpindah ke request POST terakhir, yaitu **frame 350**. Pada bagian detail paket, saya membuka:
+Selanjutnya, kami berpindah ke request POST terakhir, yaitu **frame 350**. Pada bagian detail paket, saya membuka:
 
    Field form memperlihatkan username `lain_admin` dan password `wired_protocol_7`.
 ```text
